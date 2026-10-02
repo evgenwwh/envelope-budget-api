@@ -1,0 +1,115 @@
+body {
+  max-width: 680px;
+  margin: 40px auto;
+  padding: 0 16px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  color: #333;
+}
+
+h1 {
+  font-weight: normal;
+  border-bottom: 2px solid #333;
+  padding-bottom: 8px;
+}
+
+h1 small {
+  float: right;
+  color: #2a7a3b;
+}
+
+h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.block {
+  border: 1px solid #ccc;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+input,
+select,
+button {
+  font: inherit;
+  padding: 4px 6px;
+}
+
+input[type="number"] {
+  width: 90px;
+}
+
+button {
+  cursor: pointer;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  text-align: left;
+  font-weight: normal;
+  color: #888;
+  font-size: 13px;
+}
+
+th,
+td {
+  padding: 8px 4px;
+  border-bottom: 1px solid #ddd;
+}
+
+.money {
+  text-align: right;
+  font-family: Menlo, monospace;
+}
+
+form.spend {
+  display: flex;
+  gap: 4px;
+}
+
+td.actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.link {
+  border: none;
+  background: none;
+  color: #36c;
+  text-decoration: underline;
+  padding: 0 4px;
+}
+
+.link.delete {
+  color: #c33;
+}
+
+.hint {
+  color: #999;
+  margin-bottom: 0;
+}
+
+.error {
+  color: #c33;
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.tools .block {
+  flex: 1;
+  min-width: 260px;
+}
+
+#distribute-list label {
+  display: inline-block;
+  margin: 0 12px 6px 0;
+}

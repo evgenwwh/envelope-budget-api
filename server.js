@@ -47,6 +47,39 @@ app.get('/envelopes/:id', (req, res) => {
   res.json(envelope);
 });
 
+app.put('/envelopes/:id', (req, res) => {
+  const envelope = findEnvelope(req.params.id);
+  if (!envelope) {
+    return res.status(404).json({ error: 'Envelope not found' });
+  }
+
+  const { title, budget, spend } = req.body || {};
+
+  if (title !== undefined && (typeof title !== 'string' || title.trim() === '')) {
+    return res.status(400).json({ error: 'Title must be a non-empty string' });
+  }
+  if (budget !== undefined && (typeof budget !== 'number' || !Number.isFinite(budget) || budget < 0)) {
+    return res.status(400).json({ error: 'Budget must be a non-negative number' });
+  }
+  if (spend !== undefined && (typeof spend !== 'number' || !Number.isFinite(spend) || spend <= 0)) {
+    return res.status(400).json({ error: 'Spend must be a positive number' });
+  }
+
+  let newBudget = budget !== undefined ? budget : envelope.budget;
+  if (spend !== undefined) {
+    if (spend > newBudget) {
+      return res.status(400).json({ error: `Not enough money in "${envelope.title}"` });
+    }
+    newBudget -= spend;
+  }
+
+  if (title !== undefined) envelope.title = title.trim();
+  totalBudget += newBudget - envelope.budget;
+  envelope.budget = newBudget;
+
+  res.json(envelope);
+});
+
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });

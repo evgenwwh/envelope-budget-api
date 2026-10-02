@@ -91,6 +91,30 @@ app.delete('/envelopes/:id', (req, res) => {
   res.status(204).send();
 });
 
+app.post('/envelopes/transfer/:from/:to', (req, res) => {
+  const from = findEnvelope(req.params.from);
+  const to = findEnvelope(req.params.to);
+  if (!from || !to) {
+    return res.status(404).json({ error: 'Envelope not found' });
+  }
+  if (from === to) {
+    return res.status(400).json({ error: 'Cannot transfer to the same envelope' });
+  }
+
+  const { amount } = req.body || {};
+  if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
+    return res.status(400).json({ error: 'Amount must be a positive number' });
+  }
+  if (amount > from.budget) {
+    return res.status(400).json({ error: `Not enough money in "${from.title}"` });
+  }
+
+  from.budget -= amount;
+  to.budget += amount;
+
+  res.json({ from, to });
+});
+
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });

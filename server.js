@@ -80,6 +80,17 @@ app.put('/envelopes/:id', (req, res) => {
   res.json(envelope);
 });
 
+app.delete('/envelopes/:id', (req, res) => {
+  const index = envelopes.findIndex((e) => e.id === Number(req.params.id));
+  if (index === -1) {
+    return res.status(404).json({ error: 'Envelope not found' });
+  }
+
+  totalBudget -= envelopes[index].budget;
+  envelopes.splice(index, 1);
+  res.status(204).send();
+});
+
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });

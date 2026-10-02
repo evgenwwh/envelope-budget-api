@@ -1,4 +1,8 @@
+require('dotenv').config({ quiet: true });
+
 const express = require('express');
+const { sequelize } = require('./models');
+const envelopesRouter = require('./routes/envelopes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -6,150 +10,18 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static('public'));
 
-// Global storage for envelopes and the total budget
-let envelopes = [];
-let totalBudget = 0;
-let nextId = 1;
+app.use('/envelopes', envelopesRouter);
 
-app.get('/', (req, res) => {
-  res.send('Hello, World');
+app.use((err, req, res, next) => {
+  if (err.status && err.status < 500) {
+    return res.status(err.status).json({ error: err.message });
+  }
+  console.error(err);
+  res.status(500).json({ error: 'Something went wrong' });
 });
 
-// Create a new envelope
-app.post('/envelopes', (req, res) => {
-  const { title, budget } = req.body || {};
-
-  if (typeof title !== 'string' || title.trim() === '') {
-    return res.status(400).json({ error: 'Title is required and must be a non-empty string' });
-  }
-  if (typeof budget !== 'number' || !Number.isFinite(budget) || budget < 0) {
-    return res.status(400).json({ error: 'Budget must be a non-negative number' });
-  }
-
-  const envelope = { id: nextId++, title: title.trim(), budget };
-  envelopes.push(envelope);
-  totalBudget += budget;
-
-  res.status(201).json(envelope);
-});
-
-// Get all envelopes
-app.get('/envelopes', (req, res) => {
-  res.json({ totalBudget, envelopes });
-});
-
-const findEnvelope = (id) => envelopes.find((e) => e.id === Number(id));
-
-app.get('/envelopes/:id', (req, res) => {
-  const envelope = findEnvelope(req.params.id);
-  if (!envelope) {
-    return res.status(404).json({ error: 'Envelope not found' });
-  }
-  res.json(envelope);
-});
-
-app.put('/envelopes/:id', (req, res) => {
-  const envelope = findEnvelope(req.params.id);
-  if (!envelope) {
-    return res.status(404).json({ error: 'Envelope not found' });
-  }
-
-  const { title, budget, spend } = req.body || {};
-
-  if (title !== undefined && (typeof title !== 'string' || title.trim() === '')) {
-    return res.status(400).json({ error: 'Title must be a non-empty string' });
-  }
-  if (budget !== undefined && (typeof budget !== 'number' || !Number.isFinite(budget) || budget < 0)) {
-    return res.status(400).json({ error: 'Budget must be a non-negative number' });
-  }
-  if (spend !== undefined && (typeof spend !== 'number' || !Number.isFinite(spend) || spend <= 0)) {
-    return res.status(400).json({ error: 'Spend must be a positive number' });
-  }
-
-  let newBudget = budget !== undefined ? budget : envelope.budget;
-  if (spend !== undefined) {
-    if (spend > newBudget) {
-      return res.status(400).json({ error: `Not enough money in "${envelope.title}"` });
-    }
-    newBudget -= spend;
-  }
-
-  if (title !== undefined) envelope.title = title.trim();
-  totalBudget += newBudget - envelope.budget;
-  envelope.budget = newBudget;
-
-  res.json(envelope);
-});
-
-app.delete('/envelopes/:id', (req, res) => {
-  const index = envelopes.findIndex((e) => e.id === Number(req.params.id));
-  if (index === -1) {
-    return res.status(404).json({ error: 'Envelope not found' });
-  }
-
-  totalBudget -= envelopes[index].budget;
-  envelopes.splice(index, 1);
-  res.status(204).send();
-});
-
-app.post('/envelopes/transfer/:from/:to', (req, res) => {
-  const from = findEnvelope(req.params.from);
-  const to = findEnvelope(req.params.to);
-  if (!from || !to) {
-    return res.status(404).json({ error: 'Envelope not found' });
-  }
-  if (from === to) {
-    return res.status(400).json({ error: 'Cannot transfer to the same envelope' });
-  }
-
-  const { amount } = req.body || {};
-  if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
-    return res.status(400).json({ error: 'Amount must be a positive number' });
-  }
-  if (amount > from.budget) {
-    return res.status(400).json({ error: `Not enough money in "${from.title}"` });
-  }
-
-  from.budget -= amount;
-  to.budget += amount;
-
-  res.json({ from, to });
-});
-
-app.post('/envelopes/distribute', (req, res) => {
-  const { amount, envelopeIds } = req.body || {};
-
-  if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
-    return res.status(400).json({ error: 'Amount must be a positive number' });
-  }
-  if (!Array.isArray(envelopeIds) || envelopeIds.length === 0) {
-    return res.status(400).json({ error: 'envelopeIds must be a non-empty array' });
-  }
-
-  const targets = [];
-  for (const id of new Set(envelopeIds.map(Number))) {
-    const envelope = findEnvelope(id);
-    if (!envelope) {
-      return res.status(404).json({ error: `Envelope ${id} not found` });
-    }
-    targets.push(envelope);
-  }
-
-  const cents = Math.round(amount * 100);
-  const share = Math.floor(cents / targets.length);
-  let remainder = cents % targets.length;
-
-  targets.forEach((envelope) => {
-    const extra = remainder > 0 ? 1 : 0;
-    remainder -= extra;
-    envelope.budget = Math.round(envelope.budget * 100 + share + extra) / 100;
+sequelize.sync().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server listening on http://localhost:${PORT}`);
   });
-
-  totalBudget = Math.round((totalBudget + cents / 100) * 100) / 100;
-
-  res.json({ added: cents / 100, totalBudget, envelopes: targets });
-});
-
-app.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
 });

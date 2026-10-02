@@ -1,0 +1,391 @@
+openapi: 3.0.3
+info:
+  title: Personal Budget API
+  description: Envelope budgeting API. Split your money into envelopes, spend from them and track transactions.
+  version: 2.0.0
+
+tags:
+  - name: Envelopes
+  - name: Transactions
+
+paths:
+  /envelopes:
+    get:
+      tags: [Envelopes]
+      summary: List all envelopes and the total budget
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalBudget:
+                    type: number
+                    example: 450
+                  envelopes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Envelope'
+    post:
+      tags: [Envelopes]
+      summary: Create an envelope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, budget]
+              properties:
+                title:
+                  type: string
+                  example: Food
+                budget:
+                  type: number
+                  example: 300
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /envelopes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Envelopes]
+      summary: Get one envelope
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Envelopes]
+      summary: Update an envelope or spend from it
+      description: All fields are optional. If both budget and spend are sent, the budget is set first and spend is taken from it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: Groceries
+                budget:
+                  type: number
+                  example: 400
+                spend:
+                  type: number
+                  example: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Envelopes]
+      summary: Delete an envelope and all its transactions
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /envelopes/transfer/{from}/{to}:
+    post:
+      tags: [Envelopes]
+      summary: Move money from one envelope to another
+      parameters:
+        - name: from
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 1
+        - name: to
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 2
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: number
+                  example: 100
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  from:
+                    $ref: '#/components/schemas/Envelope'
+                  to:
+                    $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /envelopes/distribute:
+    post:
+      tags: [Envelopes]
+      summary: Split an amount evenly between several envelopes
+      description: If the amount doesn't divide into whole cents, the extra cent goes to the first envelopes in the list.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, envelopeIds]
+              properties:
+                amount:
+                  type: number
+                  example: 100
+                envelopeIds:
+                  type: array
+                  items:
+                    type: integer
+                  example: [1, 2, 3]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  added:
+                    type: number
+                    example: 100
+                  totalBudget:
+                    type: number
+                    example: 550
+                  envelopes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /transactions:
+    get:
+      tags: [Transactions]
+      summary: List all transactions, newest first
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+    post:
+      tags: [Transactions]
+      summary: Create a transaction
+      description: The amount is taken from the envelope. Fails if the envelope doesn't have enough money.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionInput'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /transactions/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Transactions]
+      summary: Get one transaction
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Transactions]
+      summary: Update a transaction
+      description: All fields are optional. The old amount goes back to the old envelope and the new amount is taken from the new one.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                envelopeId:
+                  type: integer
+                  example: 2
+                amount:
+                  type: number
+                  example: 25
+                recipient:
+                  type: string
+                  example: Rewe
+                date:
+                  type: string
+                  format: date
+                  example: '2026-10-02'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Transaction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Transactions]
+      summary: Delete a transaction
+      description: The amount goes back to the envelope.
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+      example: 1
+
+  schemas:
+    Envelope:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Food
+        budget:
+          type: number
+          example: 300
+
+    TransactionInput:
+      type: object
+      required: [envelopeId, amount, recipient]
+      properties:
+        envelopeId:
+          type: integer
+          example: 1
+        amount:
+          type: number
+          example: 12.5
+        recipient:
+          type: string
+          example: Lidl
+        date:
+          type: string
+          format: date
+          description: Defaults to today
+          example: '2026-10-02'
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        date:
+          type: string
+          format: date
+          example: '2026-10-02'
+        amount:
+          type: number
+          example: 12.5
+        recipient:
+          type: string
+          example: Lidl
+        envelopeId:
+          type: integer
+          example: 1
+        Envelope:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            title:
+              type: string
+              example: Food
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Invalid input or not enough money
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Not enough money in "Food"
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Envelope 1 not found

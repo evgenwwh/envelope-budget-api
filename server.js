@@ -3,6 +3,7 @@ require('dotenv').config({ quiet: true });
 const express = require('express');
 const { sequelize } = require('./models');
 const envelopesRouter = require('./routes/envelopes');
+const transactionsRouter = require('./routes/transactions');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,6 +12,7 @@ app.use(express.json());
 app.use(express.static('public'));
 
 app.use('/envelopes', envelopesRouter);
+app.use('/transactions', transactionsRouter);
 
 app.use((err, req, res, next) => {
   if (err.status && err.status < 500) {

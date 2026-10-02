@@ -5,20 +5,14 @@ const {
   isValidTitle,
   isMoney,
   isPositiveMoney,
-  isValidId,
   toCents,
   fromCents,
+  findById,
 } = require('../utils');
 
 const router = express.Router();
 
-const findEnvelope = async (id, options = {}) => {
-  const envelope = isValidId(id) ? await Envelope.findByPk(id, options) : null;
-  if (!envelope) {
-    throw new ApiError(404, `Envelope ${id} not found`);
-  }
-  return envelope;
-};
+const findEnvelope = (id, options) => findById(Envelope, id, options);
 
 const getTotalBudget = async () => Number(await Envelope.sum('budget')) || 0;
 

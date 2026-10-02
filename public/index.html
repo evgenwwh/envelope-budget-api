@@ -53,6 +53,30 @@
     </form>
   </div>
 
+  <div class="block">
+    <h3>Transactions</h3>
+    <form id="transaction-form">
+      <select name="envelopeId"></select>
+      <input name="recipient" placeholder="Paid to" required>
+      <input name="amount" type="number" min="0.01" step="0.01" placeholder="Amount" required>
+      <input name="date" type="date" required>
+      <button>Add</button>
+    </form>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Paid to</th>
+          <th>Envelope</th>
+          <th class="money">Amount</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="transactions"></tbody>
+    </table>
+    <p id="no-transactions" class="hint">No transactions yet.</p>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

@@ -6,10 +6,14 @@ const createForm = document.getElementById('create-form');
 const transferForm = document.getElementById('transfer-form');
 const distributeForm = document.getElementById('distribute-form');
 const distributeList = document.getElementById('distribute-list');
+const transactionForm = document.getElementById('transaction-form');
+const transactionsBody = document.getElementById('transactions');
+const noTransactionsEl = document.getElementById('no-transactions');
 
 let editingId = null;
 
 const money = (value) => '$' + value.toFixed(2);
+const today = () => new Date().toLocaleDateString('en-CA');
 
 async function request(url, method = 'GET', body) {
   const res = await fetch(url, {
@@ -146,8 +150,34 @@ function fillCheckboxes(envelopes) {
   });
 }
 
+function transactionRow(transaction) {
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td>${transaction.date}</td>
+    <td></td>
+    <td></td>
+    <td class="money">-${money(transaction.amount)}</td>
+    <td class="actions"></td>
+  `;
+  row.cells[1].textContent = transaction.recipient;
+  row.cells[2].textContent = transaction.Envelope.title;
+
+  row.cells[4].append(
+    button('delete', 'link delete', () => {
+      if (confirm('Delete this transaction? The money goes back to the envelope.')) {
+        update(() => request(`/transactions/${transaction.id}`, 'DELETE'));
+      }
+    })
+  );
+
+  return row;
+}
+
 async function load() {
-  const { totalBudget, envelopes } = await request('/envelopes');
+  const [{ totalBudget, envelopes }, transactions] = await Promise.all([
+    request('/envelopes'),
+    request('/transactions'),
+  ]);
 
   totalEl.textContent = money(totalBudget);
   emptyEl.hidden = envelopes.length > 0;
@@ -158,6 +188,10 @@ async function load() {
   fillSelect(transferForm.elements.from, envelopes);
   fillSelect(transferForm.elements.to, envelopes);
   fillCheckboxes(envelopes);
+  fillSelect(transactionForm.elements.envelopeId, envelopes);
+
+  noTransactionsEl.hidden = transactions.length > 0;
+  transactionsBody.replaceChildren(...transactions.map(transactionRow));
 }
 
 createForm.addEventListener('submit', (e) => {
@@ -193,5 +227,22 @@ distributeForm.addEventListener('submit', (e) => {
     amount.value = '';
   });
 });
+
+transactionForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const { envelopeId, recipient, amount, date } = transactionForm.elements;
+  update(async () => {
+    await request('/transactions', 'POST', {
+      envelopeId: Number(envelopeId.value),
+      recipient: recipient.value,
+      amount: Number(amount.value),
+      date: date.value,
+    });
+    recipient.value = '';
+    amount.value = '';
+  });
+});
+
+transactionForm.elements.date.value = today();
 
 load().catch((err) => showError(err.message));

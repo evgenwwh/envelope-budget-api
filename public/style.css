@@ -109,6 +109,14 @@ td.actions {
   min-width: 260px;
 }
 
+#transaction-form {
+  margin-bottom: 12px;
+}
+
+#transaction-form input[name="recipient"] {
+  width: 140px;
+}
+
 #distribute-list label {
   display: inline-block;
   margin: 0 12px 6px 0;

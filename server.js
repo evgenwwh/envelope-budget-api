@@ -115,6 +115,40 @@ app.post('/envelopes/transfer/:from/:to', (req, res) => {
   res.json({ from, to });
 });
 
+app.post('/envelopes/distribute', (req, res) => {
+  const { amount, envelopeIds } = req.body || {};
+
+  if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
+    return res.status(400).json({ error: 'Amount must be a positive number' });
+  }
+  if (!Array.isArray(envelopeIds) || envelopeIds.length === 0) {
+    return res.status(400).json({ error: 'envelopeIds must be a non-empty array' });
+  }
+
+  const targets = [];
+  for (const id of new Set(envelopeIds.map(Number))) {
+    const envelope = findEnvelope(id);
+    if (!envelope) {
+      return res.status(404).json({ error: `Envelope ${id} not found` });
+    }
+    targets.push(envelope);
+  }
+
+  const cents = Math.round(amount * 100);
+  const share = Math.floor(cents / targets.length);
+  let remainder = cents % targets.length;
+
+  targets.forEach((envelope) => {
+    const extra = remainder > 0 ? 1 : 0;
+    remainder -= extra;
+    envelope.budget = Math.round(envelope.budget * 100 + share + extra) / 100;
+  });
+
+  totalBudget = Math.round((totalBudget + cents / 100) * 100) / 100;
+
+  res.json({ added: cents / 100, totalBudget, envelopes: targets });
+});
+
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });

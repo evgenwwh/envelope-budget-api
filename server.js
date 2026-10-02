@@ -37,6 +37,16 @@ app.get('/envelopes', (req, res) => {
   res.json({ totalBudget, envelopes });
 });
 
+const findEnvelope = (id) => envelopes.find((e) => e.id === Number(id));
+
+app.get('/envelopes/:id', (req, res) => {
+  const envelope = findEnvelope(req.params.id);
+  if (!envelope) {
+    return res.status(404).json({ error: 'Envelope not found' });
+  }
+  res.json(envelope);
+});
+
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });
